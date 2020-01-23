@@ -1,0 +1,12 @@
+CREATE TEMP TABLE play_store_grouped AS
+	SELECT name, rating, size, type, price, content_rating, genres
+	FROM play_store_apps
+	GROUP BY name, rating, size, type, price, content_rating, genres;
+
+
+ALTER TABLE play_store_grouped
+ADD rating_rounded numeric;
+
+
+UPDATE play_store_grouped
+SET rating_rounded = ROUND(ROUND(rating * 2, 0) / 2, 1);
