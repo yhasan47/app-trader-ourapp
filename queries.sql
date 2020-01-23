@@ -239,3 +239,175 @@ SELECT *
 INTO play_store_group
 FROM play_store_grouped;
 */
+
+-- Play store stored app prices as text, making them numeric in a new column so that prices can be compared.
+-- adding column.
+/*
+ALTER TABLE play_store_group
+ADD price_clean numeric (5, 2);
+*/
+
+-- Testing a select statement to modify the play_store_group price data.
+/*
+SELECT (REPLACE(price, '$', ''))::numeric (5, 2) AS price_clean
+FROM play_store_group
+ORDER BY price_clean DESC;
+*/
+
+-- Testing data cleaning and migration in a temp table, creating temp table with data:
+/*
+CREATE TEMP TABLE play_store_price_test AS
+	SELECT name, price, price_clean
+	FROM play_store_group;
+*/
+
+--Viewing temp table
+/*
+SELECT *
+FROM play_store_price_test;
+*/
+
+-- Checking the conversion of prices in temp table
+/*
+UPDATE play_store_price_test
+SET price_clean = (REPLACE(price, '$', ''))::numeric (5, 2);
+*/
+/*
+SELECT price, price_clean
+FROM play_store_price_test
+ORDER BY price_clean DESC;
+*/
+
+-- Okay, that worked for updating the price. Modifying play_store_group
+/*
+UPDATE play_store_group
+SET price_clean = (REPLACE(price, '$', ''))::numeric (5, 2);
+*/
+
+-- Profit = Revenue - Cost. Revenue is 10000/month * app longevity (in months). Cost is (price of app *10,000 with
+-- a 10,000 minimum) + (1000 * app longevity) (in months). Showing name, greater price between app stores
+-- greater rating between stores, primary_genre, content_rating, calculating purchase price (greater app price*10,000, min 10000),
+-- months of longevity (((greater app rating*2)+1)*12 min 12), expected revenue (months of longevity * 10000),
+-- expected cost (purchase price + (months of longevity*1000)) and profit (revenue - cost).
+-- Sorted by expected profit, high to low.
+/*
+SELECT a.name,
+	   CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END AS greater_price,
+	   CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END AS greater_rating,
+	   a.primary_genre,
+	   a.content_rating,
+	   CASE WHEN (CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END) <= 1 THEN 10000
+	   	ELSE (CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END) * 10000 END AS purchase_price_of_app,
+	   CASE WHEN (CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END) = 0 THEN 12
+	   	ELSE (((CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END)*2) + 1)*12 END AS months_of_longevity,
+	   CASE WHEN (CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END) = 0 THEN 12
+	   	ELSE (((CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END)*2) + 1)*12 END *10000 AS expected_revenue,
+	   CASE WHEN (CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END) <= 1 THEN 10000
+	   	ELSE (CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END) * 10000 END + 
+	    CASE WHEN (CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END) = 0 THEN 12
+	   	ELSE (((CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END)*2) + 1)*12 END *1000 AS expected_cost,
+	   (CASE WHEN (CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END) = 0 THEN 12
+	   	ELSE (((CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END)*2) + 1)*12 END *10000) -
+			(CASE WHEN (CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END) <= 1 THEN 10000
+	   	ELSE (CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END) * 10000 END + 
+	    CASE WHEN (CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END) = 0 THEN 12
+	   	ELSE (((CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END)*2) + 1)*12 END *1000) AS expected_profit
+FROM app_store_apps AS a
+INNER JOIN play_store_group AS p
+ON a.name = p.name
+ORDER BY expected_profit DESC;
+*/
+
+-- Creating a new table with these columns and rows:
+/*
+CREATE TABLE joined_stores_profit AS
+SELECT a.name,
+	   CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END AS greater_price,
+	   CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END AS greater_rating,
+	   a.primary_genre,
+	   a.content_rating,
+	   CASE WHEN (CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END) <= 1 THEN 10000
+	   	ELSE (CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END) * 10000 END AS purchase_price_of_app,
+	   CASE WHEN (CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END) = 0 THEN 12
+	   	ELSE (((CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END)*2) + 1)*12 END AS months_of_longevity,
+	   CASE WHEN (CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END) = 0 THEN 12
+	   	ELSE (((CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END)*2) + 1)*12 END *10000 AS expected_revenue,
+	   CASE WHEN (CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END) <= 1 THEN 10000
+	   	ELSE (CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END) * 10000 END + 
+	    CASE WHEN (CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END) = 0 THEN 12
+	   	ELSE (((CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END)*2) + 1)*12 END *1000 AS expected_cost,
+	   (CASE WHEN (CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END) = 0 THEN 12
+	   	ELSE (((CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END)*2) + 1)*12 END *10000) -
+			(CASE WHEN (CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END) <= 1 THEN 10000
+	   	ELSE (CASE WHEN a.price > p.price_clean THEN a.price ELSE p.price_clean END) * 10000 END + 
+	    CASE WHEN (CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END) = 0 THEN 12
+	   	ELSE (((CASE WHEN a.rating > p.rating_rounded THEN a.rating ELSE p.rating_rounded END)*2) + 1)*12 END *1000) AS expected_profit
+FROM app_store_apps AS a
+INNER JOIN play_store_group AS p
+ON a.name = p.name
+ORDER BY expected_profit DESC;
+*/
+
+
+-- Can any apps that are only on one store match or exceed the expected profits of the top 194 of 331 that are on both stores (>=1070000)?
+-- Treating null values in the play_store_group as 0. Query below shows no. Greatest expected_profit of an app not in both app stores is
+-- 518000. This same calculation would be true for both stores individually, and these results make sense. If the only difference
+-- is a greater revenue without a greater cost then apps on both stores are a much better place to start.
+
+/*
+SELECT p.name,
+	   p.rating_rounded, 
+	   p.price_clean, 
+	   p.genres,
+	   CASE WHEN p.price_clean <= 1 THEN 10000
+	   	ELSE p.price_clean * 10000 END AS purchase_price_of_app,
+	   CASE WHEN p.rating_rounded IS NULL THEN 12
+	   	ELSE ((p.rating_rounded*2) + 1)*12 END AS months_of_longevity,
+	   (CASE WHEN p.rating_rounded IS NULL THEN 12
+	   	ELSE ((p.rating_rounded*2) + 1)*12 END) *5000 AS expected_revenue,
+	   (CASE WHEN p.price_clean <= 1 THEN 10000
+	   	ELSE p.price_clean * 10000 END) + (CASE WHEN p.rating_rounded IS NULL THEN 12
+	   	ELSE ((p.rating_rounded*2) + 1)*12 END)*1000 AS expected_cost,
+	   ((CASE WHEN p.rating_rounded IS NULL THEN 12
+	   	ELSE ((p.rating_rounded*2) + 1)*12 END) *5000) -
+			((CASE WHEN p.price_clean <= 1 THEN 10000
+	   	ELSE p.price_clean * 10000 END) + (CASE WHEN p.rating_rounded IS NULL THEN 12
+	   	ELSE ((p.rating_rounded*2) + 1)*12 END)*1000) AS expected_profit
+FROM play_store_group as p
+LEFT JOIN app_store_apps as a
+ON p.name = a.name
+WHERE a.name IS NULL
+ORDER BY expected_profit DESC;
+*/
+
+-- Does content rating or genera cluster in a way that might help make a decision? Average expected profit grouped by
+-- primary genre doesn't show a huge difference between the largest avg (1070000) and the smallest (826100)
+-- This indicates to me that genera might not be an efficient metric to purchase apps on.
+/*
+SELECT primary_genre, AVG(expected_profit)
+FROM joined_stores_profit
+GROUP BY primary_genre
+ORDER BY avg DESC;
+*/
+
+--What about content rating? Averages here were even more similar, 1305695 for the highest and 1025204.
+/*
+SELECT content_rating, AVG(expected_profit)
+FROM joined_stores_profit
+GROUP BY content_rating
+ORDER BY avg DESC;
+*/
+
+
+-- General recommendations: An app that costs 9.99 and has a 4.5 rating has better expected profits than a free app with a 4.0 rating.
+-- The company should focus on high ratings (5.0 and 4.5) and choose low cost apps within those high ratings.
+-- Neither content rating nor genre seem to be logical groups to chose an app to market.
+
+-- Top 10 apps for Black Friday: Fernanfloo, The Guardian, Geometry Dash Lite, PewDiePie's Tuber Simulator, ASOS, Egg, Inc.,
+-- Domino's Pizza USA, Cytus, H*nest Meditation, and The EO Bar.
+/*
+SELECT name
+FROM joined_stores_profit
+ORDER BY expected_profit DESC
+LIMIT 10;
+*/
