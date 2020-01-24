@@ -411,3 +411,14 @@ FROM joined_stores_profit
 ORDER BY expected_profit DESC
 LIMIT 10;
 */
+
+-- The below query shows 9 apps that have differences in case between names. None of these
+-- have a 5 star rating so they won't effect the top 10 list.
+/*
+SELECT p.name, a.name, p.price_clean, a.price, p.rating_rounded, a.rating
+FROM play_store_group AS p
+INNER JOIN app_store_apps AS a
+ON LOWER(p.name) = LOWER(a.name)
+WHERE p.name <> a.name;
+*/
+
