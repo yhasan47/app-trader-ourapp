@@ -11,6 +11,143 @@
 BEGIN FINAL QUERIES
 	Put the final queries here at top of file for easier review
 ************************************************************/
+/** Copy relevant PlayStore info into clean table 
+	- DISTINCT name
+	- price (cast as numeric to match AppStore)
+	- rating
+	- review_count
+	- content_rating (do we need this?)
+	- genre
+**/
+
+DROP TABLE play_store_clean; 
+
+	SELECT 
+		DISTINCT name, 
+		CAST(REPLACE(price,'$','') AS numeric(5,2)) AS price, 
+		rating,
+		review_count, 
+		content_rating, 
+		genres AS genre
+	INTO play_store_clean
+	FROM play_store_apps;
+
+/** Verify relevant PlayStore info is in new table **/
+	SELECT * 
+	FROM play_store_clean
+	ORDER BY name;
+
+--	DEBUGDEBUG: for some reason, there are still 690 duplicates.
+--	Come back to this
+	SELECT COUNT(name) AS num_apps,
+	COUNT(name) - COUNT(DISTINCT name) AS num_duplicates
+	FROM play_store_clean;
+
+
+
+/** Copy relevant AppStore info into new table 
+	- DISTINCT name
+	- price
+	- rating
+	- review_count (cast as numeric to match PlayStore)
+	- content_rating (do we need this?)
+	- genre
+**/
+DROP TABLE app_store_clean;
+
+	SELECT 
+		DISTINCT name, 
+		price,
+		rating,
+		CAST(review_count AS int), 
+		content_rating, 
+		primary_genre AS genre
+	INTO app_store_clean
+	FROM app_store_apps;
+
+/** Verify relevant AppStore info is in new table **/
+	SELECT * 
+	FROM app_store_clean
+	ORDER BY name;
+
+--	DEBUGDEBUG: for some reason, there are still 2 duplicates.
+--	Come back to this
+	SELECT COUNT(name) AS num_apps,
+	COUNT(name) - COUNT(DISTINCT name) AS num_duplicates
+	FROM app_store_clean;
+
+/** Combine both 'clean' tables into combined_apps table 
+	- DISTINCT name
+	- price
+	- rating (rounded to nearest .5)
+	- genre
+	- content rating (convert to common ratings terms?)
+**/
+	
+/**	Building the subquery to combine the files **/
+	SELECT * 
+	FROM app_store_clean AS a
+	UNION
+	SELECT *
+	FROM play_store_clean AS p
+	ORDER BY name;
+
+/**	Combine the files **/
+DROP TABLE combined_apps;
+	
+	SELECT subquery.*
+	INTO combined_apps
+	FROM 			
+		(SELECT * 
+		FROM app_store_clean AS a
+		UNION
+		SELECT *
+		FROM play_store_clean AS p) AS subquery;
+
+/** Verify relevant info is in combined table **/
+	SELECT * 
+	FROM combined_apps
+	ORDER BY name;
+
+/**	Add columns and calculate values for 
+	- base_cost = 10000 minimum
+	- purchase_cost = if price < 1 then 10000 else (price * 10000)
+	- advertising_cost = 1000 * projected_lifespan
+	- projected_revenue = 10000 * projected_lifespan
+	- projected_lifespan (in months) = (rating*2)+1)*12
+		- initial lifespan is one year
+		- for each 1/2 point increase in rating, lifespan increases
+		  by 
+**/
+	ALTER TABLE combined_apps
+		ADD rating_rounded numeric(2,1),
+		ADD purchase_cost numeric(9,2),
+		ADD advertising_cost numeric(7,2),
+		ADD projected_revenue numeric(9,2),
+		ADD projected_lifespan int;
+		
+/**	Round off rating values to nearest 0.5 in combined_apps */
+	UPDATE combined_apps
+		SET rating_rounded = ROUND(ROUND(rating * 2, 0) / 2, 1);
+		
+		SET purchase_cost = 
+		SET advertising_cost = 
+		SET projected_revenue = 
+		SET projected_lifespan = ;
+	
+--	Calculate purchase_cost = if price < 1 then 10000 else (price * 10000)
+	SELECT price,
+		CASE WHEN price >= 1 THEN CAST(10000 * price AS int)
+		ELSE 10000
+		END AS purchase_cost
+	FROM combined_apps;
+
+/**	update purchase_cost in combined_apps */
+	UPDATE combined_apps
+	SET purchase_cost = CASE WHEN price >= 1 THEN 
+		10000 * price
+		ELSE 10000 END;
+
 
 /***********************************************************
 END FINAL QUERIES
@@ -24,8 +161,10 @@ NOTES
 		- rating (rounded to nearest .5)
 		- genre
 		- content rating (convert to common ratings)
-		- projected monthly revenue
-		- projected lifespan
+		- purchase_cost
+		- advertising_cost
+		- projected_revenue
+		- projected_lifespan
 	
 	Content Ratings equivalances between stores. Convert Apple rating
 	to Play rating.
@@ -60,100 +199,6 @@ BEGIN DISCOVERY
 	
 --	There are 1181 duplicates in the database. 
 --	These will need to be filtered out
-
-/** Copy relevant PlayStore info into clean table 
-	- DISTINCT name
-	- price (cast as numeric to match AppStore)
-	- rating
-	- review_count
-	- content_rating (do we need this?)
-	- genre
-**/
-
---	DROP TABLE play_store_clean; 
-
-	SELECT 
-		DISTINCT name, 
-		CAST(REPLACE(price,'$','') AS numeric(5,2)) AS price, 
-		rating,
-		review_count, 
-		content_rating, 
-		genres AS genre
-	INTO play_store_clean
-	FROM play_store_apps;
-
-/** Verify relevant PlayStore info is in new table **/
-	SELECT * 
-	FROM play_store_clean
-	ORDER BY name;
-
---	DEBUGDEBUG: for some reason, there are still 690 duplicates.
---	Come back to this
-	SELECT COUNT(name) AS num_apps,
-	COUNT(name) - COUNT(DISTINCT name) AS num_duplicates
-	FROM play_store_clean;
-
-/** Copy relevant AppStore info into new table 
-	- DISTINCT name
-	- price
-	- rating
-	- review_count (cast as numeric to match PlayStore)
-	- content_rating (do we need this?)
-	- genre
-**/
---	DROP TABLE app_store_clean;
-
-	SELECT 
-		DISTINCT name, 
-		price,
-		rating,
-		CAST(review_count AS int), 
-		content_rating, 
-		primary_genre AS genre
-	INTO app_store_clean
-	FROM app_store_apps;
-
-/** Verify relevant AppStore info is in new table **/
-	SELECT * 
-	FROM app_store_clean
-	ORDER BY name;
-
---	DEBUGDEBUG: for some reason, there are still 2 duplicates.
---	Come back to this
-	SELECT COUNT(name) AS num_apps,
-	COUNT(name) - COUNT(DISTINCT name) AS num_duplicates
-	FROM app_store_clean;
-
-/** Combine both 'clean' tables into combined_apps table 
-	- DISTINCT name
-	- price
-	- rating (rounded to nearest .5)
-	- genre
-	- content rating (convert to common ratings terms?)
-**/
-	
--- Building the subquery to combine the files
-	SELECT * 
-	FROM app_store_clean AS a
-	UNION
-	SELECT *
-	FROM play_store_clean AS p
-	ORDER BY name;
-
-
-DROP TABLE combined_apps;
-	
-	SELECT subquery.*
-	INTO combined_apps
-	FROM 			
-		(SELECT * 
-		FROM app_store_clean AS a
-		UNION
-		SELECT *
-		FROM play_store_clean AS p) AS subquery;
-
-
-
 
 
 	/** How many apps are in both databases? 
