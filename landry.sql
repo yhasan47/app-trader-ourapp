@@ -8,11 +8,153 @@
 */
 
 /***********************************************************
+BEGIN FINAL QUERIES
+	Put the final queries here at top of file for easier review
+************************************************************/
+
+/***********************************************************
+END FINAL QUERIES
+************************************************************/
+
+/*********************************************************** 
+NOTES
+	Final File Content: final combined_apps table should like this:
+		- name (filter out duplicates)
+		- price 
+		- rating (rounded to nearest .5)
+		- genre
+		- content rating (convert to common ratings)
+		- projected monthly revenue
+		- projected lifespan
+	
+	Content Ratings equivalances between stores. Convert Apple rating
+	to Play rating.
+		Play Store				Apple Store
+		Unrated
+		Everyone					4+
+		Everyone 10+				9+
+		Teen						12+
+		Mature 17+					17+
+		Adults only 18+
+************************************************************/
+
+
+/***********************************************************
 BEGIN DISCOVERY
 	Look in these tables, what's there?
 	How is it organized?
 	How do the two tables compare to each other in design?
 ************************************************************/
+
+/** clean up the data 
+	Using 'Instagram' as a test case, it seems that there are
+	quite a few duplicates in the play_store_apps table
+**/
+	SELECT *
+	FROM play_store_apps
+	WHERE name = 'Instagram';
+
+	SELECT COUNT(name) AS num_apps,
+	COUNT(name) - COUNT(DISTINCT name) AS num_duplicates
+	FROM play_store_apps;
+	
+--	There are 1181 duplicates in the database. 
+--	These will need to be filtered out
+
+/** Copy relevant PlayStore info into clean table 
+	- DISTINCT name
+	- price (cast as numeric to match AppStore)
+	- rating
+	- review_count
+	- content_rating (do we need this?)
+	- genre
+**/
+
+--	DROP TABLE play_store_clean; 
+
+	SELECT 
+		DISTINCT name, 
+		CAST(REPLACE(price,'$','') AS numeric(5,2)) AS price, 
+		rating,
+		review_count, 
+		content_rating, 
+		genres AS genre
+	INTO play_store_clean
+	FROM play_store_apps;
+
+/** Verify relevant PlayStore info is in new table **/
+	SELECT * 
+	FROM play_store_clean
+	ORDER BY name;
+
+--	DEBUGDEBUG: for some reason, there are still 690 duplicates.
+--	Come back to this
+	SELECT COUNT(name) AS num_apps,
+	COUNT(name) - COUNT(DISTINCT name) AS num_duplicates
+	FROM play_store_clean;
+
+/** Copy relevant AppStore info into new table 
+	- DISTINCT name
+	- price
+	- rating
+	- review_count (cast as numeric to match PlayStore)
+	- content_rating (do we need this?)
+	- genre
+**/
+--	DROP TABLE app_store_clean;
+
+	SELECT 
+		DISTINCT name, 
+		price,
+		rating,
+		CAST(review_count AS int), 
+		content_rating, 
+		primary_genre AS genre
+	INTO app_store_clean
+	FROM app_store_apps;
+
+/** Verify relevant AppStore info is in new table **/
+	SELECT * 
+	FROM app_store_clean
+	ORDER BY name;
+
+--	DEBUGDEBUG: for some reason, there are still 2 duplicates.
+--	Come back to this
+	SELECT COUNT(name) AS num_apps,
+	COUNT(name) - COUNT(DISTINCT name) AS num_duplicates
+	FROM app_store_clean;
+
+/** Combine both 'clean' tables into combined_apps table 
+	- DISTINCT name
+	- price
+	- rating (rounded to nearest .5)
+	- genre
+	- content rating (convert to common ratings terms?)
+**/
+	
+-- Building the subquery to combine the files
+	SELECT * 
+	FROM app_store_clean AS a
+	UNION
+	SELECT *
+	FROM play_store_clean AS p
+	ORDER BY name;
+
+
+DROP TABLE combined_apps;
+	
+	SELECT subquery.*
+	INTO combined_apps
+	FROM 			
+		(SELECT * 
+		FROM app_store_clean AS a
+		UNION
+		SELECT *
+		FROM play_store_clean AS p) AS subquery;
+
+
+
+
 
 	/** How many apps are in both databases? 
 	553 or 7422 depending on JOIN or LEFT JOIN.
@@ -77,45 +219,14 @@ BEGIN DISCOVERY
 		FROM play_store_apps AS android;
 		-- 1181 duplicates in play_store_apps
 
-	/** Copy relevant AppStore info into new table **/
-		SELECT 
-			DISTINCT name, 
-			price,
-			rating,
-			CAST(review_count AS int), 
-			content_rating, 
-			primary_genre AS genre
-		INTO app_store_clean
-		FROM app_store_apps;
 
-	/** Verify relevant AppStore info is in new table **/
-		SELECT * 
-		FROM app_store_clean
-		ORDER BY name;
-
-		SELECT *
-		FROM play_store_apps;
-
-	/** Copy relevant PlayStore info into new table **/
-		SELECT 
-			DISTINCT name, 
-			CAST(REPLACE(price,'$','') AS numeric(5,2)) AS price, 
-			rating,
-			review_count, 
-			content_rating, 
-			genres AS genre
-		INTO play_store_clean
-		FROM play_store_apps;
-
-	/** Verify relevant PlayStore info is in new table **/
-		SELECT * 
-		FROM play_store_clean
-		ORDER BY name;
 
 	/** This query recasts the AppStore price as a float **/
-		SELECT CAST(REPLACE('$4.99','$','') AS float);
+	--	SELECT CAST(REPLACE('$4.99','$','') AS float);
 
 /** Combine clean app files **/
+
+/* This query works but it includes duplicate names and NULL ratings
 	SELECT subquery.*
 	INTO combined_apps
 	FROM 			
@@ -123,16 +234,23 @@ BEGIN DISCOVERY
 		FROM app_store_clean AS a
 		UNION
 		SELECT *
-		FROM play_store_clean AS p) AS subquery;
+		FROM play_store_clean AS p) AS subquery
+	WHERE a.name = p.name;
+*/
+	/** Display the apps that are in both clean databases **/
+		SELECT DISTINCT *
+		FROM app_store_clean AS a
+		INNER JOIN play_store_clean AS p
+		ON LOWER(a.name) = LOWER(p.name);
+
 
 /** Verify relevant info is in combined table **/
 	SELECT * 
 	FROM combined_apps
-	ORDER BY price DESC;
+	WHERE rating IS NOT NULL
+	ORDER BY name;
 	
-	-- YES, this works
-	
-	
+	-- YES, this works.
 	
 	
 
