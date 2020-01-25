@@ -125,7 +125,31 @@ INNER JOIN app_store_apps AS a
 ON p.name = a.name
 WHERE CAST(REPLACE(p.price, '$', '') AS numeric) <> a.price
 ORDER BY p.name;
+
+
+
+
+Lets take a look at the ratings. First lets make a temp table to make viewing the results easier.
+
 */
 
+CREATE TEMP TABLE combined_table
+SELECT 	p.name AS pname,
+	   										a.name AS aname,
+	   										p.rating AS prating,
+	   										a.rating AS arating,
+	   										p.size AS psize,
+	   										a.size_bytes AS asize,
+	   										p.price AS pprice,
+	   										a.price AS aprice,
+	   										p.content_rating AS pcontent_rating,
+	   										a.content_rating AS acontent_rating,
+	   										p.genres AS  pgenres,	   	
+	   										a.primary_genre AS aprimary_genres
+										
+									FROM play_store_grouped AS p
+									INNER JOIN app_store_apps AS a
+									ON p.name = a.name;
+									
 
 
