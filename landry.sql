@@ -9,7 +9,7 @@
 
 /***********************************************************
 BEGIN SETUP QUERIES
-	Put the final queries here at top of file for easier review
+	Set up the data for easier review
 ************************************************************/
 /** Copy relevant PlayStore info into clean table 
 	- DISTINCT name
@@ -119,7 +119,7 @@ DROP TABLE combined_apps;
 /**	Combine the files **/
 	CREATE TABLE combined_apps AS
 	--	NOTE: SELECT statement needs to sort and combine columns
-	SELECT a.name,
+	SELECT DISTINCT a.name,
 		CASE WHEN a.price > p.price THEN a.price 
 			ELSE p.price END AS price,
 		CASE WHEN a.rating > p.rating THEN a.rating 
@@ -128,7 +128,7 @@ DROP TABLE combined_apps;
 		a.content_rating
 	FROM app_store_clean AS a
 	INNER JOIN play_store_clean AS p 
-	ON a.name = p.name;
+	ON LOWER(a.name) = LOWER(p.name);
 	
 
 /** CHECKPOINT **********************************/
@@ -231,46 +231,18 @@ DROP TABLE combined_apps;
 /** CHECKPOINT **********************************/
 /***********************************************/
 /***********************************************/
-/** Verify relevant info is in combined table.
-
-	Now that the combined table is fully populated, we can start
-	looking deeper to see what's inside.
-**/
+/** Verify relevant info is in combined table. **/
 	SELECT * 
 	FROM combined_apps
 	ORDER BY name;
 
-/***********************************************************
-BEGIN DISCOVERY
-	Look in the combines table, what's there?
-	How is it organized?
-************************************************************/
-
---	Look at top ten apps by projected revenue
+--	Look at top 20 apps by projected_revenue and rating
 	SELECT * 
 	FROM combined_apps
-	ORDER BY projected_revenue DESC
-	LIMIT 10;
-
---	Look at top ten apps by rating
-	SELECT * 
-	FROM combined_apps
-	WHERE rating IS NOT NULL
-	ORDER BY rating DESC
-	LIMIT 10;
-
---	Look at top ten apps by rating
-	SELECT * 
-	FROM combined_apps
-	ORDER BY projected_revenue DESC, genre 
-	LIMIT 10;
-
---	There are quite a few apps with 5.0 rating.
-	SELECT DISTINCT COUNT(rating_rounded) AS num_top_rating
-	FROM combined_apps
-	WHERE rating_rounded = 5.0;
+	ORDER BY projected_revenue DESC, rating_rounded 
+	LIMIT 20;
 	
-/** There are 1078 apps with a 5.0 rating. 
+/** There are 10 apps with a 5.0 rating. 
 	These apps have the longest lifespan and potentially the
 		highest potential revenue. Look at them.
 	They are all priced at $1 or less and have 5.0 ratings,
@@ -283,7 +255,8 @@ BEGIN DISCOVERY
 	WHERE rating_rounded = 5.0
 	ORDER BY projected_revenue DESC;
 	
---	Copy them into top_ten_candidates table
+DROP TABLE top_ten_candidates;
+--	Create top_ten_candidates table
 	SELECT subquery.*
 	INTO top_ten_candidates
 	FROM 			
@@ -296,23 +269,41 @@ BEGIN DISCOVERY
 	FROM top_ten_candidates
 	ORDER BY projected_revenue DESC;
 	
-	
-
--- Count dupes: there are quite a few. Will this affect deliverables?
-	SELECT COUNT(name) AS num_apps,
-	COUNT(name) - COUNT(DISTINCT name) AS num_duplicates
-	FROM top_ten_candidates;
-
-
-
-/**	NOTE 
-
-**/
 
 
 /***********************************************************
-END FINAL QUERIES
+DISCOVERY
+	Look in the top_ten_candidates table, what's there?
 ************************************************************/
+	
+	SELECT * 
+	FROM top_ten_candidates
+	ORDER BY projected_revenue DESC;
+
+/***********************************************************
+DELIVERABLES
+	Develop some general recommendations as to price range, genre, 
+	content_rating for apps that the company should target.
+	
+	Develop a Top 10 List of the apps that App Trader should buy 
+	next week for its Black Friday debut.
+	
+	Prepare a 5-10 minute presentation for the leadership team of 
+	App Trader.
+	
+	Top Ten Results
+	- all apps have 5.0 rating
+	- most apps are free to download
+	- game genre is most popular BUT a news app is more popular 
+		than all other apps
+	
+	General Recommendations
+	- Purchase the apps with 5.0 recommendation
+	- 
+************************************************************/
+
+
+
 
 /*********************************************************** 
 NOTES
@@ -338,158 +329,6 @@ NOTES
 		Adults only 18+
 ************************************************************/
 
-
-
-/** clean up the data 
-	Using 'Instagram' as a test case, it seems that there are
-	quite a few duplicates in the play_store_apps table
-**/
-	SELECT *
-	FROM play_store_apps
-	WHERE name = 'Instagram';
-
-	SELECT COUNT(name) AS num_apps,
-	COUNT(name) - COUNT(DISTINCT name) AS num_duplicates
-	FROM play_store_apps;
-	
---	There are 1181 duplicates in the database. 
---	These will need to be filtered out
-
-
-	/** How many apps are in both databases? 
-	553 or 7422 depending on JOIN or LEFT JOIN.
-	Which is correct? **/
-
-		SELECT COUNT(apple.name)
-		FROM app_store_apps AS apple
-		INNER JOIN play_store_apps AS android
-		ON android.name = apple.name;
-
-	/** Display the apps that are in both databases **/
-		SELECT *
-		FROM app_store_apps AS apple
-		INNER JOIN play_store_apps AS android
-		ON LOWER(android.name) = LOWER(apple.name);
-
-	/** Display app_store_apps by price DESC **/
-		SELECT name, price, content_rating, primary_genre
-		FROM app_store_apps AS apple
-		ORDER BY price DESC;
-
-	/** What content ratings used in app_store_apps?
-		4+
-		9+
-		12+
-		17+
-	**/
-		SELECT DISTINCT content_rating
-		FROM app_store_apps
-		ORDER BY content_rating DESC;
-
-	/** What content ratings used in play_store_apps?
-		"Unrated"
-		"Teen"
-		"Mature 17+"
-		"Everyone 10+"
-		"Everyone"
-		"Adults only 18+"
-	**/
-		SELECT DISTINCT content_rating
-		FROM play_store_apps
-		ORDER BY content_rating DESC;
-
-	/** Content Ratings equivalances?
-		Play Store				Apple Store
-		Unrated
-		Everyone					4+
-		Everyone 10+				9+
-		Teen						12+
-		Mature 17+					17+
-		Adults only 18+
-	**/
-
-	/** Count duplicates in both databases **/
-		SELECT COUNT (*), COUNT(DISTINCT name),
-		COUNT (*) - COUNT(DISTINCT name) AS num_duplicates
-		FROM app_store_apps AS apple;
-		-- 2 duplicates in app_store_apps
-		
-		SELECT COUNT (*), COUNT(DISTINCT name),
-		COUNT (*) - COUNT(DISTINCT name) AS num_duplicates
-		FROM play_store_apps AS android;
-		-- 1181 duplicates in play_store_apps
-
-
-
-	/** This query recasts the AppStore price as a float **/
-	--	SELECT CAST(REPLACE('$4.99','$','') AS float);
-
-/** Combine clean app files **/
-
-/* This query works but it includes duplicate names and NULL ratings
-	SELECT subquery.*
-	INTO combined_apps
-	FROM 			
-		(SELECT * 
-		FROM app_store_clean AS a
-		UNION
-		SELECT *
-		FROM play_store_clean AS p) AS subquery
-	WHERE a.name = p.name;
-	/** Display the apps that are in both clean databases **/
-		SELECT DISTINCT *
-		FROM app_store_clean AS a
-		INNER JOIN play_store_clean AS p
-		ON LOWER(a.name) = LOWER(p.name);
-
-
-/** Verify relevant info is in combined table **/
-	SELECT * 
-	FROM combined_apps
-	WHERE rating IS NOT NULL
-	ORDER BY name;
-	
-	-- YES, this works.
-	
-*/
-	
-
-/** NOTE THESE WILL DROP NEW TABLES **/
---DROP TABLE play_store_clean;
---DROP TABLE app_store_clean;
---DROP TABLE combined_apps;
-
-/***********************************************************
-END DISCOVERY
-************************************************************/
-
-/* DEBUG DEBUG: These queries don't work
-
-SELECT name, price, content_rating, primary_genre
-FROM app_store_apps AS apple
-UNION
-SELECT name, CAST(price AS numeric(5,2)), content_rating, genres
-FROM play_store_apps AS android;
-
-
-SELECT name, price, content_rating, primary_genre
-FROM app_store_apps AS apple
-UNION
-SELECT name, price, content_rating, genres
-FROM play_store_apps AS android;
-*/		  
-
-/***********************************************************
-DELIVERABLES
-	Develop some general recommendations as to price range, genre, 
-	content_rating for apps that the company should target.
-	
-	Develop a Top 10 List of the apps that App Trader should buy 
-	next week for its Black Friday debut.
-	
-	Prepare a 5-10 minute presentation for the leadership team of 
-	App Trader.
-************************************************************/
 
 				  
 				  
