@@ -8,7 +8,7 @@
 */
 
 /***********************************************************
-BEGIN FINAL QUERIES
+BEGIN SETUP QUERIES
 	Put the final queries here at top of file for easier review
 ************************************************************/
 /** Copy relevant PlayStore info into clean table 
@@ -76,6 +76,11 @@ DROP TABLE app_store_clean;
 	COUNT(name) - COUNT(DISTINCT name) AS num_duplicates
 	FROM app_store_clean;
 
+	SELECT COUNT(name) AS num_apps,
+	COUNT(name) - COUNT(DISTINCT name) AS num_duplicates,
+	(SELECT name FROM app_store_clean)
+	FROM app_store_clean;
+
 /** Combine both 'clean' tables into combined_apps table 
 	- DISTINCT name
 	- price
@@ -104,6 +109,9 @@ DROP TABLE combined_apps;
 		SELECT *
 		FROM play_store_clean AS p) AS subquery;
 
+/** CHECKPOINT **********************************/
+/***********************************************/
+/***********************************************/
 /** Verify relevant info is in combined table **/
 	SELECT * 
 	FROM combined_apps
@@ -113,7 +121,8 @@ DROP TABLE combined_apps;
 	- base_cost = 10000 minimum
 	- purchase_cost = if price < 1 then 10000 else (price * 10000)
 	- advertising_cost = 1000 * projected_lifespan
-	- projected_revenue = 10000 * projected_lifespan
+	- projected_revenue = (10000 * projected_lifespan) - 
+		(purchase_cost + advertising_cost)
 	- projected_lifespan (in months) = (rating*2)+1)*12
 		- initial lifespan is one year
 		- for each 1/2 point increase in rating, lifespan increases
@@ -122,18 +131,13 @@ DROP TABLE combined_apps;
 	ALTER TABLE combined_apps
 		ADD rating_rounded numeric(2,1),
 		ADD purchase_cost numeric(9,2),
-		ADD advertising_cost numeric(7,2),
+		ADD advertising_cost numeric(9,2),
 		ADD projected_revenue numeric(9,2),
 		ADD projected_lifespan int;
 		
 /**	Round off rating values to nearest 0.5 in combined_apps */
 	UPDATE combined_apps
 		SET rating_rounded = ROUND(ROUND(rating * 2, 0) / 2, 1);
-		
-		SET purchase_cost = 
-		SET advertising_cost = 
-		SET projected_revenue = 
-		SET projected_lifespan = ;
 	
 --	Calculate purchase_cost = if price < 1 then 10000 else (price * 10000)
 	SELECT price,
@@ -147,6 +151,98 @@ DROP TABLE combined_apps;
 	SET purchase_cost = CASE WHEN price >= 1 THEN 
 		10000 * price
 		ELSE 10000 END;
+
+/**	Calculate lifespan in months
+	- lifespan = 12
+	- FOR EACH .5 OF rating, lifespan += 12
+**/
+	SELECT name, rating_rounded,
+		CASE 
+			WHEN rating_rounded = 1 THEN 24
+			WHEN rating_rounded = 1.5 THEN 36
+			WHEN rating_rounded = 2 THEN 60
+			WHEN rating_rounded = 2.5 THEN 72
+			WHEN rating_rounded = 3 THEN 84
+			WHEN rating_rounded = 3.5 THEN 96
+			WHEN rating_rounded = 4 THEN 108
+			WHEN rating_rounded = 4.5 THEN 120
+			WHEN rating_rounded = 5 THEN 132
+			ELSE 12
+			END AS lifespan
+	FROM combined_apps;
+
+/**	update lifespan in combined_apps **/
+	UPDATE combined_apps
+	SET projected_lifespan = 
+		CASE 
+			WHEN rating_rounded = 1 THEN 24
+			WHEN rating_rounded = 1.5 THEN 36
+			WHEN rating_rounded = 2 THEN 60
+			WHEN rating_rounded = 2.5 THEN 72
+			WHEN rating_rounded = 3 THEN 84
+			WHEN rating_rounded = 3.5 THEN 96
+			WHEN rating_rounded = 4 THEN 108
+			WHEN rating_rounded = 4.5 THEN 120
+			WHEN rating_rounded = 5 THEN 132
+			ELSE 12 END;
+
+--	Calculate advertising_cost = 1000 * projected_lifespan  
+	SELECT name, projected_lifespan,
+		projected_lifespan * 1000 AS advertising_cost
+	FROM combined_apps;
+
+--	Update advertising_cost in combined_apps
+	UPDATE combined_apps
+	SET advertising_cost = projected_lifespan * 1000;
+
+--	Calculate projected_revenue = 10000 * projected_lifespan  
+	SELECT name, projected_lifespan,
+		(projected_lifespan * 10000) - (purchase_cost + advertising_cost)
+		AS projected_revenue
+	FROM combined_apps;
+
+--	Update projected_revenue in combined_apps
+	UPDATE combined_apps
+	SET projected_revenue = 
+		(projected_lifespan * 10000) - (purchase_cost + advertising_cost);
+
+/** CHECKPOINT **********************************/
+/***********************************************/
+/***********************************************/
+/** Verify relevant info is in combined table.
+
+	Now that the combined table is fully populated, we can start
+	looking deeper to see what's inside.
+**/
+	SELECT * 
+	FROM combined_apps
+	ORDER BY name;
+
+/***********************************************************
+BEGIN DISCOVERY
+	Look in the combines table, what's there?
+	How is it organized?
+************************************************************/
+
+--	Look at top ten apps by projected revenue
+	SELECT * 
+	FROM combined_apps
+	ORDER BY projected_revenue DESC
+	LIMIT 10;
+
+--	Look at top ten apps by rating
+	SELECT * 
+	FROM combined_apps
+	WHERE rating IS NOT NULL
+	ORDER BY rating DESC
+	LIMIT 10;
+
+
+
+
+/**	NOTE 
+
+**/
 
 
 /***********************************************************
@@ -178,12 +274,6 @@ NOTES
 ************************************************************/
 
 
-/***********************************************************
-BEGIN DISCOVERY
-	Look in these tables, what's there?
-	How is it organized?
-	How do the two tables compare to each other in design?
-************************************************************/
 
 /** clean up the data 
 	Using 'Instagram' as a test case, it seems that there are
@@ -281,7 +371,6 @@ BEGIN DISCOVERY
 		SELECT *
 		FROM play_store_clean AS p) AS subquery
 	WHERE a.name = p.name;
-*/
 	/** Display the apps that are in both clean databases **/
 		SELECT DISTINCT *
 		FROM app_store_clean AS a
@@ -297,6 +386,7 @@ BEGIN DISCOVERY
 	
 	-- YES, this works.
 	
+*/
 	
 
 /** NOTE THESE WILL DROP NEW TABLES **/
