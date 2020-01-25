@@ -89,25 +89,47 @@ DROP TABLE app_store_clean;
 	- content rating (convert to common ratings terms?)
 **/
 	
-/**	Building the subquery to combine the files **/
-	SELECT * 
-	FROM app_store_clean AS a
-	UNION
-	SELECT *
-	FROM play_store_clean AS p
-	ORDER BY name;
+/**	Building the query to combine the files **/
 
-/**	Combine the files **/
-DROP TABLE combined_apps;
-	
-	SELECT subquery.*
-	INTO combined_apps
-	FROM 			
-		(SELECT * 
+	/** NOTE: this UNION is the wrong thing here. Use INNER JOIN
+		to create the combined table
+		SELECT * 
 		FROM app_store_clean AS a
 		UNION
 		SELECT *
-		FROM play_store_clean AS p) AS subquery;
+		FROM play_store_clean AS p
+		ORDER BY name;
+
+		SELECT subquery.*
+		INTO combined_apps
+		FROM 			
+			(SELECT * 
+			FROM app_store_clean AS a
+			INNER JOIN play_store_clean AS p 
+			ON a.name = p.name) AS subquery;
+	**/
+
+	SELECT * 
+	FROM app_store_clean AS a
+	INNER JOIN play_store_clean AS p 
+	ON a.name = p.name;
+
+
+DROP TABLE combined_apps;
+/**	Combine the files **/
+	CREATE TABLE combined_apps AS
+	--	NOTE: SELECT statement needs to sort and combine columns
+	SELECT a.name,
+		CASE WHEN a.price > p.price THEN a.price 
+			ELSE p.price END AS price,
+		CASE WHEN a.rating > p.rating THEN a.rating 
+			ELSE p.rating END AS rating,
+		a.genre,
+		a.content_rating
+	FROM app_store_clean AS a
+	INNER JOIN play_store_clean AS p 
+	ON a.name = p.name;
+	
 
 /** CHECKPOINT **********************************/
 /***********************************************/
@@ -237,6 +259,49 @@ BEGIN DISCOVERY
 	ORDER BY rating DESC
 	LIMIT 10;
 
+--	Look at top ten apps by rating
+	SELECT * 
+	FROM combined_apps
+	ORDER BY projected_revenue DESC, genre 
+	LIMIT 10;
+
+--	There are quite a few apps with 5.0 rating.
+	SELECT DISTINCT COUNT(rating_rounded) AS num_top_rating
+	FROM combined_apps
+	WHERE rating_rounded = 5.0;
+	
+/** There are 1078 apps with a 5.0 rating. 
+	These apps have the longest lifespan and potentially the
+		highest potential revenue. Look at them.
+	They are all priced at $1 or less and have 5.0 ratings,
+		definitely potential candidates for top ten list.
+	Copy them into top_ten_candidates table
+**/
+--	Setup subquery
+	SELECT DISTINCT * 
+	FROM combined_apps
+	WHERE rating_rounded = 5.0
+	ORDER BY projected_revenue DESC;
+	
+--	Copy them into top_ten_candidates table
+	SELECT subquery.*
+	INTO top_ten_candidates
+	FROM 			
+		(SELECT DISTINCT * 
+			FROM combined_apps
+			WHERE rating_rounded = 5.0) AS subquery;
+
+--	Verify relevant info is in top_ten_candidates table.
+	SELECT * 
+	FROM top_ten_candidates
+	ORDER BY projected_revenue DESC;
+	
+	
+
+-- Count dupes: there are quite a few. Will this affect deliverables?
+	SELECT COUNT(name) AS num_apps,
+	COUNT(name) - COUNT(DISTINCT name) AS num_duplicates
+	FROM top_ten_candidates;
 
 
 
