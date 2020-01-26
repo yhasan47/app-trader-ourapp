@@ -158,8 +158,29 @@ FROM combined_table;
 
 
 
-cant compare playstore ratings because they are not rounded to nearest .5 or .0.
+--cant compare playstore ratings because they are not rounded to nearest .5 or .0.
+--WHERE rating::text NOT LIKE '%.0' AND				This way is will query exactly what i need.
+--	  rating::text NOT LIKE '%.5';
+
 
 SELECT arating, prating
 FROM combined_table;
+
+
+
+--Round playstore ratings so i can figure out the longevity. 
+/*
+ALTER TABLE play_store_grouped
+ADD COLUMN rating_rounded numeric;
+*/
+-- JJJ
+
+
+/*
+UPDATE play_store_grouped
+SET rating_rounded = ROUND(ROUND(rating * 2, 0) / 2, 1);
+*/
+
+
+
 
