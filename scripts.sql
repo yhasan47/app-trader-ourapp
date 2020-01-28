@@ -14,17 +14,28 @@ FROM app_store_apps	Result: 7197
 SELECT COUNT (*)
 FROM play_store_apps	Result: 10840
 
--- 3.	What are the names of apps that have duplicates in the app store?
+-- 3.	How many apps are duplicated in the app store? How many apps are duplicated in the play store?
+
+SELECT COUNT(name) - COUNT(DISTINCT name) AS duplicate_apps
+FROM app_store_apps;
+
+SELECT COUNT(name) - COUNT(DISTINCT name) AS duplicate_apps
+FROM play_store_apps;
+
+-- 4.	Which apps in the app store and play store are duplicated and how many times are they duplicated? 
 
 SELECT name, COUNT(name) 
 FROM app_store_apps
 GROUP BY name
 HAVING COUNT(name) > 1
+ORDER BY COUNT DESC
 
--- 4.	How many apps are duplicated in the play store?
+SELECT name, COUNT(name) 
+FROM play_store_apps
+GROUP BY name
+HAVING COUNT(name) > 1
+ORDER BY count DESC
 
-SELECT COUNT(name) - COUNT(DISTINCT name) AS duplicate_apps
-FROM play_store_apps;
 
 -- 5.	Create a table to change the price value that's in text into numeric form. 
 
