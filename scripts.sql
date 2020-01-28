@@ -39,10 +39,13 @@ SELECT COUNT (DISTINCT name)
 FROM app_store_apps
 WHERE price = 0 AND rating = 5;
 
--- 6.	How many different genres are there in the app store?
+-- 6.	How many different genres are there in the app store? Play store?
 
 SELECT DISTINCT primary_genre
 FROM app_store_apps
+
+SELECT DISTINCT genres
+FROM play_store_apps
 
 -- 7.	What are some free apps that have a rating of 5 in the Apple app store? 
 
