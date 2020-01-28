@@ -59,12 +59,11 @@ SELECT DISTINCT price
 FROM play_store_apps
 ORDER BY price
 
-SELECT p.price, p.name AS play_store, a.price, a.name AS app_store
+SELECT  p.name, a.name, p.genres, a.primary_genre, p.price, a.price, p.content_rating, a.content_rating
 FROM play_store_apps AS p
 INNER JOIN app_store_apps AS a
 ON p.name = a.name
-ORDER BY a.price DESC;	
-
+ORDER BY p.price DESC;
 
 -- 7.	What are some different content ratings in the app store? And play store apps?
 SELECT DISTINCT content_rating
