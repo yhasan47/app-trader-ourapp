@@ -38,7 +38,7 @@ SELECT
 	INTO play_store_price_fix
 	FROM play_store_apps;
 	
--- 6.	What are the different prices in the app store?  What are the different prices in the Android app store?
+-- 6.	What are the prices of the apps in both tables?
 
 SELECT DISTINCT price
 FROM app_store_apps
@@ -47,6 +47,13 @@ ORDER BY price
 SELECT DISTINCT price
 FROM play_store_apps
 ORDER BY price
+
+SELECT p.price, p.name AS play_store, a.price, a.name AS app_store
+FROM play_store_apps AS p
+INNER JOIN app_store_apps AS a
+ON p.name = a.name
+ORDER BY a.price DESC;	
+
 
 -- 7.	What are some different content ratings in the app store? And play store apps?
 SELECT DISTINCT content_rating
@@ -114,13 +121,6 @@ FROM app_store_apps AS apple
 LEFT JOIN play_store_apps AS android
 ONE android.name = apple.name
 
--- 15.	What are the prices of the apps in both tables?
-
-SELECT p.price, p.name AS play_store, a.price, a.name AS app_store
-FROM play_store_apps AS p
-INNER JOIN app_store_apps AS a
-ON p.name = a.name
-ORDER BY a.price DESC;
 
 
 
