@@ -131,10 +131,10 @@ ORDER BY p.name;
 
 Lets take a look at the ratings. First lets make a temp table to make viewing the results easier.
 
-*/
 
-CREATE TEMP TABLE combined_table
-SELECT 	p.name AS pname,
+
+CREATE TEMP TABLE combined_table AS
+									SELECT 	p.name AS pname,
 	   										a.name AS aname,
 	   										p.rating AS prating,
 	   										a.rating AS arating,
@@ -149,7 +149,38 @@ SELECT 	p.name AS pname,
 										
 									FROM play_store_grouped AS p
 									INNER JOIN app_store_apps AS a
-									ON p.name = a.name;
+									ON LOWER(p.name) = LOWER(a.name);
+
 									
+SELECT *
+FROM combined_table;
+*/
+
+
+
+--cant compare playstore ratings because they are not rounded to nearest .5 or .0.
+--WHERE rating::text NOT LIKE '%.0' AND				This way is will query exactly what i need.
+--	  rating::text NOT LIKE '%.5';
+
+
+SELECT arating, prating
+FROM combined_table;
+
+
+
+--Round playstore ratings so i can figure out the longevity. 
+/*
+ALTER TABLE play_store_grouped
+ADD COLUMN rating_rounded numeric;
+*/
+-- JJJ
+
+
+/*
+UPDATE play_store_grouped
+SET rating_rounded = ROUND(ROUND(rating * 2, 0) / 2, 1);
+*/
+
+
 
 
