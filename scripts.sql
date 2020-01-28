@@ -17,10 +17,10 @@ FROM play_store_apps	Result: 10840
 -- 3.	How many apps are duplicated in the app store? How many apps are duplicated in the play store?
 
 SELECT COUNT(name) - COUNT(DISTINCT name) AS duplicate_apps
-FROM app_store_apps;
+FROM app_store_apps;		Result: 2
 
 SELECT COUNT(name) - COUNT(DISTINCT name) AS duplicate_apps
-FROM play_store_apps;
+FROM play_store_apps;		Result: 1181
 
 -- 4.	Which apps in the app store and play store are duplicated and how many times are they duplicated? 
 
@@ -65,23 +65,24 @@ INNER JOIN app_store_apps AS a
 ON p.name = a.name
 ORDER BY p.price DESC;
 
--- 7.	What are some different content ratings in the app store? And play store apps?
-SELECT DISTINCT content_rating
-FROM app_store_apps
-ORDER BY content_rating
 
-SELECT DISTINCT content_rating
-FROM play_store_apps
-ORDER BY content_rating
+/* Creating a temp table called play_store_grouped to put together all play store rows that 
+have the same name, rating, size, type, price, content_rating, and genre. */ 
+
+CREATE TEMP TABLE play_store_grouped AS
+	SELECT name, rating, size, type, price, content_rating, genres
+	FROM play_store_apps
+	GROUP BY name, rating, size, type, price, content_rating, genres;
+	
 
 	
--- 8.	How many apps in the app store have a price of 0 and rating of 5?
+-- 7.	How many apps in the app store have a price of 0 and rating of 5?
 
 SELECT COUNT (DISTINCT name)
 FROM app_store_apps
 WHERE price = 0 AND rating = 5;
 
--- 9.	How many different genres are there in the app store? Play store?
+-- 8.	How many different genres are there in the app store? Play store?
 
 SELECT DISTINCT primary_genre
 FROM app_store_apps
@@ -89,7 +90,7 @@ FROM app_store_apps
 SELECT DISTINCT genres
 FROM play_store_apps
 
--- 10.	What are some free apps that have a rating of 5 in the Apple app store? 
+-- 9.	What are some free apps that have a rating of 5 in the Apple app store? 
 
 SELECT name, price, rating
     FROM app_store_apps
@@ -98,7 +99,7 @@ SELECT name, price, rating
 	ORDER BY rating
 
 
--- 11.	What are some of the lowest priced apps from the Android app store with a rating of 5? 
+-- 10.	What are some of the lowest priced apps from the Android app store with a rating of 5? 
 
 SELECT name, price, rating
     FROM play_store_apps
@@ -106,7 +107,7 @@ SELECT name, price, rating
      AND rating = 5
      ORDER BY rating
 
--- 12.	What are some apps from the Apple app store that are priced at either 0.99 cents or lower and have a rating of 5? 
+-- 11.	What are some apps from the Apple app store that are priced at either 0.99 cents or lower and have a rating of 5? 
 
 SELECT *
 FROM app_store_apps
@@ -117,20 +118,48 @@ ORDER BY rating DESC
 LIMIT 100;
 
 
--- 13.	Which apps from the app_store_apps have a price of 0 or 0.99 cent and are rated 5?
+-- 12.	Which apps from the app_store_apps have a price of 0 or 0.99 cent and are rated 5?
 
 SELECT *
 FROM app_store_apps
 WHERE (price = 0 OR price = 0.99)
 AND rating = 5
 
--- 14.	How many apps are in both app stores?
+-- 13.	How many apps are in both app stores?
 
 SELECT COUNT (apple.name)
 FROM app_store_apps AS apple
 LEFT JOIN play_store_apps AS android
-ONE android.name = apple.name
+ON android.name = apple.name
 
+--14.	Is the price the same for all matching apps in both stores?
 
+SELECT p.name,
+	   a.name,
+	   p.rating,
+	   a.rating,
+	   p.size,
+	   a.size_bytes,
+	   p.price,
+	   a.price,
+	   p.content_rating,
+	   a.content_rating,
+	   p.genres,	   
+	   a.primary_genre
+FROM play_store_grouped AS p
+INNER JOIN app_store_apps AS a
+ON p.name = a.name
+AND CAST(REPLACE(p.price, '$', '') AS numeric) <> a.price
+ORDER BY p.name;
+
+-- 15.	What are some different content ratings in the app store? And play store apps?
+
+SELECT DISTINCT content_rating
+FROM app_store_apps
+ORDER BY content_rating
+
+SELECT DISTINCT content_rating
+FROM play_store_apps
+ORDER BY content_rating
 
 
