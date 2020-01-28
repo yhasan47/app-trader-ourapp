@@ -14,24 +14,17 @@ FROM app_store_apps	Result: 7197
 SELECT COUNT (*)
 FROM play_store_apps	Result: 10840
 
--- 3.	What are the different prices in the app store?  What are the different prices in the Android app store?
+-- 3.	What are the names of apps that have duplicates in the app store?
 
-SELECT DISTINCT price
+SELECT name, COUNT(name) 
 FROM app_store_apps
-ORDER BY price
+GROUP BY name
+HAVING COUNT(name) > 1
 
-SELECT DISTINCT price
-FROM play_store_apps
-ORDER BY price
+-- 4.	How many apps are duplicated in the play store?
 
--- 4.	What are some different content ratings in the app store? And play store apps?
-SELECT DISTINCT content_rating
-FROM app_store_apps
-ORDER BY content_rating
-
-SELECT DISTINCT content_rating
-FROM play_store_apps
-ORDER BY content_rating
+SELECT COUNT(name) - COUNT(DISTINCT name) AS duplicate_apps
+FROM play_store_apps;
 
 -- 5.	Create a table to change the price value that's in text into numeric form. 
 
@@ -45,13 +38,33 @@ SELECT
 	INTO play_store_price_fix
 	FROM play_store_apps;
 	
--- 6.	How many apps in the app store have a price of 0 and rating of 5?
+-- 6.	What are the different prices in the app store?  What are the different prices in the Android app store?
+
+SELECT DISTINCT price
+FROM app_store_apps
+ORDER BY price
+
+SELECT DISTINCT price
+FROM play_store_apps
+ORDER BY price
+
+-- 7.	What are some different content ratings in the app store? And play store apps?
+SELECT DISTINCT content_rating
+FROM app_store_apps
+ORDER BY content_rating
+
+SELECT DISTINCT content_rating
+FROM play_store_apps
+ORDER BY content_rating
+
+	
+-- 8.	How many apps in the app store have a price of 0 and rating of 5?
 
 SELECT COUNT (DISTINCT name)
 FROM app_store_apps
 WHERE price = 0 AND rating = 5;
 
--- 7.	How many different genres are there in the app store? Play store?
+-- 9.	How many different genres are there in the app store? Play store?
 
 SELECT DISTINCT primary_genre
 FROM app_store_apps
@@ -59,7 +72,7 @@ FROM app_store_apps
 SELECT DISTINCT genres
 FROM play_store_apps
 
--- 8.	What are some free apps that have a rating of 5 in the Apple app store? 
+-- 10.	What are some free apps that have a rating of 5 in the Apple app store? 
 
 SELECT name, price, rating
     FROM app_store_apps
@@ -68,7 +81,7 @@ SELECT name, price, rating
 	ORDER BY rating
 
 
--- 9.	What are some of the lowest priced apps from the Android app store with a rating of 5? 
+-- 11.	What are some of the lowest priced apps from the Android app store with a rating of 5? 
 
 SELECT name, price, rating
     FROM play_store_apps
@@ -76,7 +89,7 @@ SELECT name, price, rating
      AND rating = 5
      ORDER BY rating
 
--- 10.	What are some apps from the Apple app store that are priced at either 0.99 cents or lower and have a rating of 5? 
+-- 12.	What are some apps from the Apple app store that are priced at either 0.99 cents or lower and have a rating of 5? 
 
 SELECT *
 FROM app_store_apps
@@ -87,21 +100,21 @@ ORDER BY rating DESC
 LIMIT 100;
 
 
--- 11.	Which apps from the app_store_apps have a price of 0 or 0.99 cent and are rated 5?
+-- 13.	Which apps from the app_store_apps have a price of 0 or 0.99 cent and are rated 5?
 
 SELECT *
 FROM app_store_apps
 WHERE (price = 0 OR price = 0.99)
 AND rating = 5
 
--- 12.	How many apps are in both app stores?
+-- 14.	How many apps are in both app stores?
 
 SELECT COUNT (apple.name)
 FROM app_store_apps AS apple
 LEFT JOIN play_store_apps AS android
 ONE android.name = apple.name
 
--- 13.	What are the prices of the apps in both tables?
+-- 15.	What are the prices of the apps in both tables?
 
 SELECT p.price, p.name AS play_store, a.price, a.name AS app_store
 FROM play_store_apps AS p
@@ -109,16 +122,5 @@ INNER JOIN app_store_apps AS a
 ON p.name = a.name
 ORDER BY a.price DESC;
 
--- 14.	What are the names of apps that have duplicates in the app store?
 
-SELECT name, COUNT(name) 
-FROM app_store_apps
-GROUP BY name
-HAVING COUNT(name) > 1
-
-
--- 15.	How many apps are duplicated in the play store?
-
-SELECT COUNT(name) - COUNT(DISTINCT name) AS duplicate_apps
-FROM play_store_apps;
 
