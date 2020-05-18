@@ -74,8 +74,13 @@ CREATE TEMP TABLE play_store_grouped AS
 	FROM play_store_apps
 	GROUP BY name, rating, size, type, price, content_rating, genres;
 	
+-- Finding the difference of rows and unique names in the new temp table: 22
 
-	
+/* 
+SELECT COUNT(*) - COUNT(DISTINCT name)
+FROM play_store_grouped;
+
+
 -- 7.	How many apps in the app store have a price of 0 and rating of 5?
 
 SELECT COUNT (DISTINCT name)
@@ -161,5 +166,7 @@ ORDER BY content_rating
 SELECT DISTINCT content_rating
 FROM play_store_apps
 ORDER BY content_rating
+
+
 
 
